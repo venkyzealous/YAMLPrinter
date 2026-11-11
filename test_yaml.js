@@ -43,9 +43,42 @@ const sampleData = {
       ]
     },
     {
+      type: "grid",
+      bbox: [40, 500, 900, 400],
+      elements: [
+        {
+          type: "column",
+          bbox: [40, 500, 150, 400],
+          elements: [
+            { type: "text_block", text: "Employee", bbox: [40, 550, 150, 30] }
+          ]
+        },
+        {
+          type: "column",
+          bbox: [200, 500, 300, 400],
+          elements: [
+            {
+              type: "heading",
+              level: 3,
+              text: "STAGE 1 · NOV 15 - DEC 15 Collect inputs",
+              bbox: [200, 500, 300, 40]
+            },
+            {
+              type: "card",
+              bbox: [200, 550, 300, 80],
+              elements: [
+                { type: "heading", level: 4, text: "Complete self-evaluation" },
+                { type: "link", text: "OneHub", url: "https://onehub.epam.com" }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
       type: "paragraph",
       text: "This document details target state. Refer to the Official Titan Specification.",
-      bbox: [40, 450, 850, 40],
+      bbox: [40, 950, 850, 40],
       links: [
         { text: "Official Titan Specification", url: "https://example.com/spec" }
       ]

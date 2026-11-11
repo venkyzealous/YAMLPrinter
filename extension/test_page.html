@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YAML Printer Test Page - Architecture Roadmap &amp; IFrames</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 40px auto;
+      max-width: 960px;
+      line-height: 1.6;
+      color: #1e293b;
+    }
+    h1 { font-size: 32px; color: #0f172a; margin-bottom: 8px; }
+    h2 { font-size: 22px; color: #1e293b; margin-top: 32px; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; }
+    h3 { font-size: 18px; color: #334155; }
+    p { margin: 12px 0; }
+    a { color: #0284c7; text-decoration: underline; }
+
+    /* Timeline Infographic */
+    .timeline {
+      display: flex;
+      justify-content: space-between;
+      position: relative;
+      margin: 40px 0;
+      padding: 20px 0;
+    }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      top: 32px;
+      left: 30px;
+      right: 30px;
+      height: 4px;
+      background: #cbd5e1;
+      z-index: 1;
+    }
+    .timeline-step {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      width: 160px;
+    }
+    .timeline-dot {
+      width: 24px;
+      height: 24px;
+      background: #0284c7;
+      border: 4px solid #fff;
+      border-radius: 50%;
+      margin: 0 auto 12px;
+      box-shadow: 0 0 0 2px #0284c7;
+    }
+    .timeline-label {
+      font-weight: 600;
+      font-size: 14px;
+      color: #0f172a;
+    }
+    .timeline-date {
+      font-size: 12px;
+      color: #64748b;
+    }
+
+    /* Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    th, td {
+      border: 1px solid #cbd5e1;
+      padding: 10px 14px;
+      text-align: left;
+    }
+    th {
+      background-color: #f1f5f9;
+      font-weight: 600;
+    }
+
+    /* Embedded Frame Container */
+    .frame-container {
+      border: 2px solid #0284c7;
+      border-radius: 8px;
+      overflow: hidden;
+      margin: 30px 0;
+    }
+    .frame-header {
+      background: #0284c7;
+      color: white;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    iframe.demo-frame {
+      width: 100%;
+      height: 420px;
+      border: none;
+    }
+
+    /* Test Extraction Sandbox Bar */
+    .test-banner {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 30px;
+    }
+    button.action-btn {
+      background: #0284c7;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 14px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    /* Grid Matrix */
+    .talent-grid {
+      display: grid;
+      grid-template-columns: 160px 1fr 1fr;
+      gap: 16px;
+      margin: 20px 0;
+    }
+    .role-column {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .role-title {
+      font-weight: 700;
+      color: #0369a1;
+      padding: 10px;
+      background: #f0f9ff;
+      border-radius: 6px;
+    }
+    .stage-column {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .stage-header {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 10px;
+    }
+    .card {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 16px 0;
+    }
+    .pill {
+      background: #e0f2fe;
+      color: #0369a1;
+      border: 1px solid #bae6fd;
+      border-radius: 9999px;
+      padding: 4px 12px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-banner">
+    <h3>🧪 Extension In-Page Multi-Frame Test Sandbox</h3>
+    <p>Test the extraction engine on parent content and nested iframes right inside Chrome:</p>
+    <button class="action-btn" id="btn-run-local-test">Run In-Page Layout Extraction</button>
+    <button class="action-btn" id="btn-save-local-test" style="background:#059669; margin-left: 8px;">Trigger File System Save Picker</button>
+  </div>
+
+  <header>
+    <h1>Top Portal Shell (Parent Document)</h1>
+    <p>This simulates a portal (like OneHub) hosting applications inside nested iframes. Refer to the <a href="https://example.com/spec">Parent Gateway Specs</a>.</p>
+  </header>
+
+  <main>
+    <h2>Embedded Application (Nested IFrame Sandbox)</h2>
+    <div class="frame-container">
+      <div class="frame-header">IFrame: AI/Run Mission 2026 Simulation</div>
+      <iframe class="demo-frame" title="AI/Run Mission 2026 Playbook" srcdoc='
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: system-ui, sans-serif; padding: 20px; color: #1e293b; background: #f8fafc; }
+            h1 { font-size: 24px; color: #ff6b1a; }
+            .flow { display: flex; gap: 10px; margin: 20px 0; }
+            .flow-stage { background: #fff; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; flex: 1; text-align: center; }
+            .fs-k { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700; }
+            .fs-t { font-size: 13px; font-weight: 600; margin-top: 4px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+            th, td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; }
+            th { background: #e2e8f0; font-size: 12px; }
+            .step[hidden] { display: none; }
+          </style>
+        </head>
+        <body>
+          <h1>AI/Run Winning Criteria &amp; Program Playbook</h1>
+          <p>Nested frame content that was previously skipped. Now fully captured! Link: <a href="https://leap.epam.com">LEAP Program Portal</a></p>
+          
+          <div class="flow">
+            <div class="flow-stage">
+              <div class="fs-k">July - Sept</div>
+              <div class="fs-t">Milestone 1</div>
+            </div>
+            <div class="flow-stage">
+              <div class="fs-k">15-30 Nov</div>
+              <div class="fs-t">Milestone 2</div>
+            </div>
+            <div class="flow-stage">
+              <div class="fs-k">December</div>
+              <div class="fs-t">Grand Final</div>
+            </div>
+          </div>
+
+          <!-- Tab Panel 1: Active -->
+          <section class="step" id="panel-timeline" role="tabpanel">
+            <h3>Tab 1: Milestone Details</h3>
+            <p>Milestone 1 is a required checkpoint for all teams.</p>
+          </section>
+
+          <!-- Tab Panel 2: Inactive / Print Mode -->
+          <section class="step" id="panel-winning" role="tabpanel" hidden>
+            <h3>Tab 2: Winning Criteria Table (Un-hidden via Print Mode)</h3>
+            <table>
+              <thead><tr><th>Criterion</th><th>Description</th><th>Points</th></tr></thead>
+              <tbody>
+                <tr><td>AI Cost at Work-Unit</td><td>PR / story complexity band breakdown</td><td>+0.5</td></tr>
+                <tr><td>Enterprise Scale</td><td>Adopted beyond initial team</td><td>+0.5</td></tr>
+              </tbody>
+            </table>
+          </section>
+        </body>
+        </html>
+      '></iframe>
+    </div>
+
+    <section>
+      <h2>Parent Page Resource Matrix</h2>
+      <table>
+        <thead>
+          <tr><th>Module</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Portal Navigation</td><td>Active</td></tr>
+          <tr><td>Playbook Runner</td><td>Embedded IFrame</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 2D Role x Stage Grid Matrix Section -->
+    <section class="talent-cycle-section">
+      <h2>Annual Campaign Talent Cycle - Role &amp; Stage Matrix</h2>
+      <div class="filter-bar">
+        <span class="filter-label">YOUR ROLE:</span>
+        <button class="pill">Everyone</button>
+        <button class="pill">Employee</button>
+        <button class="pill">Talent Partner</button>
+      </div>
+
+      <div class="grid talent-grid">
+        <div class="col role-column">
+          <div class="role-title">Employee</div>
+          <div class="role-title">Talent Partner</div>
+        </div>
+
+        <div class="col stage-column">
+          <div class="stage-header">
+            <strong>STAGE 0 · NOV 1 - NOV 15</strong>
+            <div>Preparation</div>
+          </div>
+          <div class="card">
+            <h4>No action needed</h4>
+            <p>Preparation is handled by the Talent Pool Head. Your campaign actions begin at the next stage.</p>
+          </div>
+        </div>
+
+        <div class="col stage-column">
+          <div class="stage-header">
+            <strong>STAGE 1 · NOV 15 - DEC 15</strong>
+            <div>Collect inputs</div>
+          </div>
+          <div class="card">
+            <h4>Complete self-evaluation</h4>
+            <p>Annual performance self-evaluation</p>
+            <a href="https://onehub.epam.com">OneHub</a>
+          </div>
+          <div class="card">
+            <h4>Update progress on expectations</h4>
+            <a href="https://onehub.epam.com">OneHub</a>
+          </div>
+          <div class="card">
+            <h4>Ask colleagues for feedback IF NEEDED</h4>
+            <a href="https://feedback.epam.com">Feedback</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="yaml.js"></script>
+  <script src="extractor.js"></script>
+  <script>
+    document.getElementById('btn-run-local-test').addEventListener('click', () => {
+      const extractor = new PageLayoutExtractor({ includeHiddenTabs: true });
+      const result = extractor.extract();
+      const yaml = stringifyYAML(result);
+      console.log('=== EXTRACTED MULTI-FRAME STRUCTURED YAML ===\n', yaml);
+      alert('Extraction completed with IFrame capture! Open Browser Console (F12) to inspect.');
+    });
+
+    document.getElementById('btn-save-local-test').addEventListener('click', async () => {
+      const extractor = new PageLayoutExtractor({ includeHiddenTabs: true });
+      const result = extractor.extract();
+      const yaml = stringifyYAML(result);
+
+      if (window.showSaveFilePicker) {
+        try {
+          const handle = await window.showSaveFilePicker({
+            suggestedName: 'multiframe-test-layout.yaml',
+            types: [{ description: 'YAML File', accept: { 'text/yaml': ['.yaml'] } }]
+          });
+          const writable = await handle.createWritable();
+          await writable.write(yaml);
+          await writable.close();
+          alert('Successfully saved via showSaveFilePicker()!');
+        } catch(e) {
+          if (e.name !== 'AbortError') console.error(e);
+        }
+      } else {
+        alert('showSaveFilePicker not supported in this frame context.');
+      }
+    });
+  </script>
+</body>
+</html>

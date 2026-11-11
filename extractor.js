@@ -416,7 +416,15 @@
       table.querySelectorAll('tr').forEach(tr => {
         const cells = [];
         tr.querySelectorAll('td').forEach(td => {
-          cells.push(td.innerText.trim().replace(/\s+/g, ' '));
+          const links = Array.from(td.querySelectorAll('a[href]'))
+            .filter(a => a.innerText.trim())
+            .map(a => ({ text: a.innerText.trim(), url: a.href }));
+          const text = td.innerText.trim().replace(/\s+/g, ' ');
+          if (links.length > 0) {
+            cells.push({ text, links });
+          } else {
+            cells.push(text);
+          }
         });
         if (cells.length > 0) {
           rows.push(cells);
@@ -530,36 +538,65 @@
 
     detectTimelineOrSteps(container) {
       const children = Array.from(container.children).filter(c => this.isVisible(c));
-      if (children.length < 2) return null;
+      // Timelines and steppers must contain between 2 and 24 discrete milestone items
+      if (children.length < 2 || children.length > 24) return null;
 
       const className = (container.className || '').toString().toLowerCase();
       const id = (container.id || '').toLowerCase();
-      const isExplicitTimeline = /timeline|milestone|roadmap|process|stepper|steps|flow|stages|sequence|progress|pipeline/i.test(
+      
+      // Strict timeline classes: NEVER match generic words like "process", "flow", "stages", "steps", "sequence", "pipeline"
+      // which are commonly used for entire page layouts or complex data grids
+      const isExplicitTimeline = /\b(timeline|stepper|milestone-track|step-indicator|progress-tracker)\b/i.test(
         className + ' ' + id
       );
 
-      let hasMarkers = false;
+      // Verify that EVERY candidate child is a simple, atomic milestone node.
+      // If ANY child is a complex layout container (table, grid, cards, large text, nested structures),
+      // THIS IS NOT A SIMPLE INFOGRAPHIC TIMELINE - return null to preserve full hierarchy!
       const items = [];
+      let markerFound = false;
 
       for (const child of children) {
-        const childClass = (child.className || '').toString().toLowerCase();
-        const isStepChild = /step|item|event|milestone|node|point|stage|flow-stage/i.test(childClass);
-
-        const markerEl = child.querySelector(
-          '.dot, .marker, .circle, .icon, .step-number, .badge, [class*="circle"], [class*="dot"], [class*="stage"], .fs-k, .flow-stage'
-        );
         const text = child.innerText.trim();
+        if (!text) continue;
 
-        if ((isExplicitTimeline || isStepChild || markerEl) && text) {
-          if (markerEl || isStepChild) hasMarkers = true;
-          items.push({
-            bbox: this.getBBox(child),
+        // Disqualify if child text is too long for a single milestone
+        if (text.length > 200) return null;
+
+        // Disqualify if child contains tables, forms, grids, or multiple headings
+        if (child.querySelector('table, form, [role="grid"], [role="table"], h1, h2, h3')) return null;
+
+        // Disqualify if child has too many DOM elements
+        if (child.querySelectorAll('*').length > 8) return null;
+
+        // Disqualify if child dimensions indicate a large layout container (> 220px height)
+        const bbox = this.getBBox(child);
+        if (bbox[3] > 220 || (bbox[2] > 600 && bbox[3] > 140)) return null;
+
+        const childClass = (child.className || '').toString().toLowerCase();
+        const hasMarkerEl = child.querySelector(
+          '.dot, .marker, .circle, .step-number, [class*="circle"], [class*="dot"]'
+        );
+        const isMilestoneItem = isExplicitTimeline || hasMarkerEl || /\b(timeline-item|step-item|milestone)\b/i.test(childClass);
+
+        if (hasMarkerEl) markerFound = true;
+
+        if (isMilestoneItem) {
+          const links = Array.from(child.querySelectorAll('a[href]'))
+            .filter(a => a.innerText.trim())
+            .map(a => ({ text: a.innerText.trim(), url: a.href }));
+
+          const itemNode = {
+            bbox,
             content: text.replace(/\s+/g, ' ')
-          });
+          };
+          if (links.length > 0) itemNode.links = links;
+          items.push(itemNode);
         }
       }
 
-      if (items.length >= 2 && (isExplicitTimeline || hasMarkers)) {
+      // Only qualify if all candidate children are atomic milestones and have markers or explicit timeline class
+      if (items.length >= 2 && items.length === children.length && (isExplicitTimeline || markerFound)) {
         const first = items[0].bbox;
         const second = items[1].bbox;
         const isHorizontal = Math.abs(first[0] - second[0]) > Math.abs(first[1] - second[1]);
@@ -576,13 +613,35 @@
       return null;
     }
 
+    getContainerSemanticType(el, tagName) {
+      const isSemantic = ['header', 'nav', 'main', 'article', 'aside', 'footer', 'section'].includes(tagName);
+      if (isSemantic) return tagName;
+
+      const role = (el.getAttribute('role') || '').toLowerCase();
+      if (role === 'grid' || role === 'table') return 'grid';
+      if (role === 'row') return 'row';
+      if (role === 'cell' || role === 'gridcell') return 'cell';
+      if (role === 'columnheader' || role === 'rowheader') return 'header';
+
+      const className = (el.className || '').toString().toLowerCase();
+      if (/\b(grid|matrix|board|spreadsheet)\b/.test(className)) return 'grid';
+      if (/\b(card|tile|panel-box|action-card|item-card)\b/.test(className)) return 'card';
+      if (/\b(row|table-row|grid-row)\b/.test(className)) return 'row';
+      if (/\b(col|column|grid-col|table-cell|cell)\b/.test(className)) return 'column';
+      if (/\b(badge|pill|tag|chip)\b/.test(className)) return 'badge';
+
+      return 'section';
+    }
+
     extractContainer(el) {
       const children = Array.from(el.children).filter(child => this.isVisible(child));
       const directText = this.getCleanDirectText(el);
       const tagName = el.tagName.toLowerCase();
+      const containerType = this.getContainerSemanticType(el, tagName);
+      const isSpecialType = containerType !== 'section';
 
-      // Redundant wrapper elimination
-      if (children.length === 1 && !directText && !['header', 'nav', 'main', 'article', 'aside', 'footer', 'section'].includes(tagName)) {
+      // Redundant wrapper elimination (only for plain non-semantic wrapper divs)
+      if (children.length === 1 && !directText && !isSpecialType && !['header', 'nav', 'main', 'article', 'aside', 'footer', 'section'].includes(tagName)) {
         return this.processElement(children[0]);
       }
 
@@ -620,9 +679,9 @@
 
       const isSemantic = ['header', 'nav', 'main', 'article', 'aside', 'footer', 'section'].includes(tagName);
 
-      if (isSemantic || processedChildren.length > 1 || directText) {
+      if (isSemantic || isSpecialType || processedChildren.length > 1 || directText) {
         const node = {
-          type: isSemantic ? tagName : 'section',
+          type: containerType,
           bbox: this.getBBox(el),
           ...(directText ? { direct_text: directText } : {}),
           elements: processedChildren

@@ -1,6 +1,6 @@
 /**
  * Content Script Coordinator
- * Listens for export commands, runs layout extraction, and handles the Save File Picker.
+ * Listens for export commands, runs layout extraction, and downloads the YAML file.
  */
 
 (() => {
@@ -10,34 +10,54 @@
     } catch (e) {}
   }
 
+  function downloadBlob(content, filename) {
+    const blob = new Blob([content], { type: 'application/x-yaml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      if (a.parentElement) a.parentElement.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 120000);
+    }, 500);
+  }
+
   window.__yamlPrinterMessageListener = (message, sender, sendResponse) => {
     // 1. Direct compiled YAML save request from background multi-frame aggregator
     if (message.action === 'SAVE_COMPILED_YAML') {
-      saveYAMLWithPicker(message.content, message.filename)
-        .then(saved => {
-          if (saved) {
-            showToast(`Saved layout as ${message.filename}`, 'success');
-          }
-          sendResponse({ success: true, saved });
-        })
-        .catch(err => {
-          console.warn('[YAML Printer] Save error, falling back to direct anchor download:', err);
-          fallbackAnchorDownload(message.content, message.filename);
-          showToast(`Saved layout as ${message.filename}`, 'success');
-          sendResponse({ success: true, saved: true });
-        });
-      return true; // Keep channel open for async response
+      try {
+        downloadBlob(message.content, message.filename);
+        showToast(`Saved layout as ${message.filename}`, 'success');
+        sendResponse({ success: true, saved: true });
+      } catch (err) {
+        console.error('[YAML Printer] Save error:', err);
+        sendResponse({ success: false, error: err.message });
+      }
+      return false;
     }
 
     // 2. Single-frame export trigger (fallback)
     if (message.action === 'EXPORT_LAYOUT_YAML') {
-      executeSingleFrameExport(message.options || {})
-        .then(result => sendResponse({ success: true, result }))
-        .catch(err => {
-          console.error('[YAML Printer] Extraction error:', err);
-          sendResponse({ success: false, error: err.message });
-        });
-      return true;
+      try {
+        showToast('Extracting structured layout...', 'info');
+        const extractor = new PageLayoutExtractor(message.options || {});
+        const structuredData = extractor.extract();
+        const yamlOutput = stringifyYAML(structuredData);
+
+        const slug = generatePageSlug(structuredData.metadata.title || window.location.hostname);
+        const filename = `${slug}-layout.yaml`;
+
+        downloadBlob(yamlOutput, filename);
+        showToast(`Saved layout as ${filename}`, 'success');
+        sendResponse({ success: true, filename, size: yamlOutput.length });
+      } catch (err) {
+        console.error('[YAML Printer] Extraction error:', err);
+        showToast(`Export failed: ${err.message}`, 'error');
+        sendResponse({ success: false, error: err.message });
+      }
+      return false;
     }
 
     // 3. Single-frame preview request
@@ -56,27 +76,6 @@
 
   chrome.runtime.onMessage.addListener(window.__yamlPrinterMessageListener);
 
-  async function executeSingleFrameExport(options = {}) {
-    showToast('Extracting structured layout...', 'info');
-
-    const extractor = new PageLayoutExtractor(options);
-    const structuredData = extractor.extract();
-    const yamlOutput = stringifyYAML(structuredData);
-
-    const slug = generatePageSlug(structuredData.metadata.title || window.location.hostname);
-    const filename = `${slug}-layout.yaml`;
-
-    const saved = await saveYAMLWithPicker(yamlOutput, filename);
-
-    if (saved) {
-      showToast(`Saved layout as ${filename}`, 'success');
-      return { filename, size: yamlOutput.length };
-    } else {
-      showToast('Export cancelled or completed via download', 'info');
-      return { filename, size: yamlOutput.length };
-    }
-  }
-
   function generatePageSlug(title) {
     return title
       .toLowerCase()
@@ -85,96 +84,50 @@
       .substring(0, 50) || 'webpage';
   }
 
-  async function saveYAMLWithPicker(content, defaultFilename) {
-    // Priority 1: Modern File System Access API
-    if (typeof window.showSaveFilePicker === 'function') {
-      try {
-        const handle = await window.showSaveFilePicker({
-          suggestedName: defaultFilename,
-          types: [
-            {
-              description: 'YAML File (*.yaml, *.yml)',
-              accept: {
-                'text/yaml': ['.yaml', '.yml']
-              }
-            }
-          ]
-        });
-        const writable = await handle.createWritable();
-        await writable.write(new Blob([content], { type: 'text/yaml;charset=utf-8' }));
-        await writable.close();
-        return true;
-      } catch (err) {
-        if (err.name === 'AbortError') {
-          return false;
-        }
-        console.warn('[YAML Printer] showSaveFilePicker failed or blocked by gesture. Falling back to background download...', err);
-      }
+  function showToast(message, type = 'info') {
+    let container = document.getElementById('yaml-printer-toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'yaml-printer-toast-container';
+      container.style.cssText = `
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 2147483647;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        pointer-events: none;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      `;
+      document.body.appendChild(container);
     }
 
-    // Priority 2: Fallback via background chrome.downloads API with saveAs prompt
-    return new Promise((resolve) => {
-      chrome.runtime.sendMessage(
-        {
-          action: 'DOWNLOAD_YAML',
-          content: content,
-          filename: defaultFilename
-        },
-        response => {
-          if (response && response.success) {
-            resolve(true);
-          } else {
-            // Priority 3: DOM Anchor fallback
-            fallbackAnchorDownload(content, defaultFilename);
-            resolve(true);
-          }
-        }
-      );
-    });
-  }
-
-  function fallbackAnchorDownload(content, filename) {
-    const blob = new Blob([content], { type: 'text/yaml;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => {
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }, 1000);
-  }
-
-  function showToast(message, type = 'info') {
-    const existing = document.getElementById('__yaml_printer_toast__');
-    if (existing) existing.remove();
-
     const toast = document.createElement('div');
-    toast.id = '__yaml_printer_toast__';
+    const bgColors = {
+      info: '#0f172a',
+      success: '#059669',
+      error: '#dc2626'
+    };
+
+    toast.style.cssText = `
+      background: ${bgColors[type] || bgColors.info};
+      color: #ffffff;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    `;
+
     toast.textContent = message;
-
-    Object.assign(toast.style, {
-      position: 'fixed',
-      bottom: '24px',
-      right: '24px',
-      zIndex: '2147483647',
-      backgroundColor: type === 'success' ? '#0f766e' : '#1e293b',
-      color: '#ffffff',
-      padding: '12px 20px',
-      borderRadius: '8px',
-      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-      fontSize: '14px',
-      fontWeight: '500',
-      transition: 'opacity 0.3s ease, transform 0.3s ease',
-      opacity: '0',
-      transform: 'translateY(10px)',
-      pointerEvents: 'none'
-    });
-
-    document.body.appendChild(toast);
+    container.appendChild(toast);
 
     requestAnimationFrame(() => {
       toast.style.opacity = '1';
@@ -184,7 +137,9 @@
     setTimeout(() => {
       toast.style.opacity = '0';
       toast.style.transform = 'translateY(10px)';
-      setTimeout(() => toast.remove(), 400);
-    }, 3500);
+      setTimeout(() => {
+        if (toast.parentElement) toast.parentElement.removeChild(toast);
+      }, 300);
+    }, 2800);
   }
 })();

@@ -114,6 +114,58 @@
       cursor: pointer;
       font-weight: 600;
     }
+    /* Grid Matrix */
+    .talent-grid {
+      display: grid;
+      grid-template-columns: 160px 1fr 1fr;
+      gap: 16px;
+      margin: 20px 0;
+    }
+    .role-column {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .role-title {
+      font-weight: 700;
+      color: #0369a1;
+      padding: 10px;
+      background: #f0f9ff;
+      border-radius: 6px;
+    }
+    .stage-column {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .stage-header {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 10px;
+    }
+    .card {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 16px 0;
+    }
+    .pill {
+      background: #e0f2fe;
+      color: #0369a1;
+      border: 1px solid #bae6fd;
+      border-radius: 9999px;
+      padding: 4px 12px;
+      cursor: pointer;
+      font-size: 13px;
+    }
   </style>
 </head>
 <body>
@@ -202,6 +254,55 @@
           <tr><td>Playbook Runner</td><td>Embedded IFrame</td></tr>
         </tbody>
       </table>
+    </section>
+
+    <!-- 2D Role x Stage Grid Matrix Section -->
+    <section class="talent-cycle-section">
+      <h2>Annual Campaign Talent Cycle - Role &amp; Stage Matrix</h2>
+      <div class="filter-bar">
+        <span class="filter-label">YOUR ROLE:</span>
+        <button class="pill">Everyone</button>
+        <button class="pill">Employee</button>
+        <button class="pill">Talent Partner</button>
+      </div>
+
+      <div class="grid talent-grid">
+        <div class="col role-column">
+          <div class="role-title">Employee</div>
+          <div class="role-title">Talent Partner</div>
+        </div>
+
+        <div class="col stage-column">
+          <div class="stage-header">
+            <strong>STAGE 0 · NOV 1 - NOV 15</strong>
+            <div>Preparation</div>
+          </div>
+          <div class="card">
+            <h4>No action needed</h4>
+            <p>Preparation is handled by the Talent Pool Head. Your campaign actions begin at the next stage.</p>
+          </div>
+        </div>
+
+        <div class="col stage-column">
+          <div class="stage-header">
+            <strong>STAGE 1 · NOV 15 - DEC 15</strong>
+            <div>Collect inputs</div>
+          </div>
+          <div class="card">
+            <h4>Complete self-evaluation</h4>
+            <p>Annual performance self-evaluation</p>
+            <a href="https://onehub.epam.com">OneHub</a>
+          </div>
+          <div class="card">
+            <h4>Update progress on expectations</h4>
+            <a href="https://onehub.epam.com">OneHub</a>
+          </div>
+          <div class="card">
+            <h4>Ask colleagues for feedback IF NEEDED</h4>
+            <a href="https://feedback.epam.com">Feedback</a>
+          </div>
+        </div>
+      </div>
     </section>
   </main>
 

@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let activeTab = null;
   let cachedYaml = '';
+  let defaultFilename = 'layout.yaml';
 
   // Get active tab
   try {
@@ -53,6 +54,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         response => {
           if (response && response.success) {
             cachedYaml = response.yaml;
+            if (response.filename) {
+              defaultFilename = response.filename;
+            } else {
+              const slug = (activeTab.title || 'page')
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '')
+                .substring(0, 50) || 'webpage';
+              defaultFilename = `${slug}-layout.yaml`;
+            }
+
             const bytes = new Blob([cachedYaml]).size;
             const kb = (bytes / 1024).toFixed(1);
             const estimatedTokens = Math.round(cachedYaml.length / 3.8);
@@ -71,7 +83,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
           } else if (response && response.isPdf) {
             pageStatus.textContent = 'Bridge Needed';
-            previewCode.textContent = '# PDF Extractor Bridge is offline.\n# Option 1: Run install_native_host.bat\n# Option 2: Run python pdf_server.py';
+            previewCode.textContent = '# PDF Extractor Bridge is offline.\n# Option 1: Run backend/install_native_host.bat\n# Option 2: Run python backend/pdf_server.py';
           } else {
             pageStatus.textContent = 'Ready';
           }
@@ -83,34 +95,52 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  function triggerDownloadDirect(content, filename) {
+    const blob = new Blob([content], { type: 'application/x-yaml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      if (a.parentElement) a.parentElement.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 120000);
+    }, 500);
+  }
+
   btnExport.addEventListener('click', async () => {
-    if (!activeTab || !activeTab.id) return;
+    if (!cachedYaml) {
+      await loadLayoutStats();
+    }
+
+    if (!cachedYaml) {
+      btnExport.textContent = 'No Data';
+      return;
+    }
 
     btnExport.disabled = true;
     btnExport.textContent = 'Saving...';
 
     try {
-      chrome.runtime.sendMessage(
-        {
-          action: 'TRIGGER_COMPILED_EXPORT',
-          tabId: activeTab.id
-        },
-        response => {
-          btnExport.disabled = false;
-          if (response && response.success) {
-            btnExport.innerHTML = `
-              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
-              Export Triggered
-            `;
-            setTimeout(() => window.close(), 800);
-          } else {
-            btnExport.textContent = 'Export Failed';
-            pageStatus.textContent = (response && response.error) ? response.error : 'Export Failed';
-          }
-        }
-      );
+      triggerDownloadDirect(cachedYaml, defaultFilename);
+      btnExport.innerHTML = `
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        Saved!
+      `;
+      setTimeout(() => {
+        btnExport.disabled = false;
+        btnExport.innerHTML = `
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+            <polyline points="7 3 7 8 15 8"></polyline>
+          </svg>
+          Save Structured YAML
+        `;
+      }, 2500);
     } catch (err) {
       console.error('Export failed:', err);
       btnExport.disabled = false;

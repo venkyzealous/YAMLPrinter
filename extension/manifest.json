@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "Print to Structured Layout YAML",
+  "version": "1.0.0",
+  "description": "Converts web page visible hierarchy, text weights, tables, infographics, links, and PDF documents into AI-ready structured layout YAML.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3fZUsdx691izUQ2q0NhRHa9QIYB0Ss3fk8hQOBFAIG8s56KWcah8lwehjlkbrElkY4HIntnyEZurG+UQ0ibZPt91r2dpBzwrH9aJvFCtZ1bMbrDxkCH5a4ryEKMycNSAJ/pfnBJtQAYyWgPFB+zSKpg87DL7eAR97blD+tclUZkeb6Hb4RrEy4KAEvYIkoyZzGVTSJucmjcawEHRK4tyZJj37zx4kvD7BVK6AB+JKmQ53uunGch4gUy/xCxr/E47Vvkfpl4eAGoG1MO6jf20LEihUbo7zat4ESZJEheUpA6/f/zD5NrIpUJtMmrCZFxlXN/RUgfWlhZbT2OH0OAVfwIDAQAB",
+  "permissions": [
+    "contextMenus",
+    "activeTab",
+    "scripting",
+    "downloads",
+    "nativeMessaging"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Print to Structured Layout YAML",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  }
+}

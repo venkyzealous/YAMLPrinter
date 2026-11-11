@@ -387,19 +387,14 @@ async function triggerCompiledExport(tabId) {
 }
 
 function triggerDownloadSaveAs(content, filename) {
-  const dataUrl = 'data:text/yaml;charset=utf-8,' + encodeURIComponent(content);
+  const dataUrl = 'data:application/octet-stream;charset=utf-8,' + encodeURIComponent(content);
   chrome.downloads.download({
     url: dataUrl,
     filename: filename,
-    saveAs: true
+    saveAs: false
   }, (downloadId) => {
     if (chrome.runtime.lastError) {
-      console.warn('[YAML Printer] downloads.download saveAs failed, retrying saveAs: false:', chrome.runtime.lastError.message);
-      chrome.downloads.download({
-        url: dataUrl,
-        filename: filename,
-        saveAs: false
-      });
+      console.warn('[YAML Printer] downloads.download failed:', chrome.runtime.lastError.message);
     }
   });
 }
