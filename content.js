@@ -4,10 +4,13 @@
  */
 
 (() => {
-  if (window.__yamlPrinterInitialized) return;
-  window.__yamlPrinterInitialized = true;
+  if (window.__yamlPrinterMessageListener) {
+    try {
+      chrome.runtime.onMessage.removeListener(window.__yamlPrinterMessageListener);
+    } catch (e) {}
+  }
 
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  window.__yamlPrinterMessageListener = (message, sender, sendResponse) => {
     // 1. Direct compiled YAML save request from background multi-frame aggregator
     if (message.action === 'SAVE_COMPILED_YAML') {
       saveYAMLWithPicker(message.content, message.filename)
@@ -18,8 +21,10 @@
           sendResponse({ success: true, saved });
         })
         .catch(err => {
-          console.warn('[YAML Printer] Save error:', err);
-          sendResponse({ success: false, error: err.message });
+          console.warn('[YAML Printer] Save error, falling back to direct anchor download:', err);
+          fallbackAnchorDownload(message.content, message.filename);
+          showToast(`Saved layout as ${message.filename}`, 'success');
+          sendResponse({ success: true, saved: true });
         });
       return true; // Keep channel open for async response
     }
@@ -47,7 +52,9 @@
       }
       return false;
     }
-  });
+  };
+
+  chrome.runtime.onMessage.addListener(window.__yamlPrinterMessageListener);
 
   async function executeSingleFrameExport(options = {}) {
     showToast('Extracting structured layout...', 'info');

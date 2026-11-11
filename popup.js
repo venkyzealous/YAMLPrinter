@@ -1,6 +1,6 @@
 /**
  * Popup Controller
- * Manages user triggers from toolbar popup, previews compiled multi-frame output,
+ * Manages user triggers from toolbar popup, previews compiled multi-frame and PDF output,
  * and computes token statistics.
  */
 
@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   loadLayoutStats();
 
   async function loadLayoutStats() {
-    if (!activeTab || !activeTab.id || activeTab.url.startsWith('chrome://')) {
+    if (!activeTab || !activeTab.id || (activeTab.url && activeTab.url.startsWith('chrome://') && !activeTab.url.includes('pdf'))) {
       pageStatus.textContent = 'Restricted';
       btnExport.disabled = true;
       btnCopy.disabled = true;
@@ -61,7 +61,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             statSize.textContent = `${kb} KB`;
             statTokens.textContent = estimatedTokens.toLocaleString();
             previewCode.textContent = cachedYaml;
-            pageStatus.textContent = response.stats.frames > 1 ? `Multi-Frame (${response.stats.frames})` : 'Ready';
+            
+            if (response.isPdf) {
+              pageStatus.textContent = 'PDF Document';
+            } else if (response.stats.frames > 1) {
+              pageStatus.textContent = `Multi-Frame (${response.stats.frames})`;
+            } else {
+              pageStatus.textContent = 'Ready';
+            }
+          } else if (response && response.isPdf) {
+            pageStatus.textContent = 'Bridge Needed';
+            previewCode.textContent = '# PDF Extractor Bridge is offline.\n# Option 1: Run install_native_host.bat\n# Option 2: Run python pdf_server.py';
           } else {
             pageStatus.textContent = 'Ready';
           }
@@ -87,13 +97,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         },
         response => {
           btnExport.disabled = false;
-          btnExport.innerHTML = `
-            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-            Export Triggered
-          `;
-          setTimeout(() => window.close(), 800);
+          if (response && response.success) {
+            btnExport.innerHTML = `
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              Export Triggered
+            `;
+            setTimeout(() => window.close(), 800);
+          } else {
+            btnExport.textContent = 'Export Failed';
+            pageStatus.textContent = (response && response.error) ? response.error : 'Export Failed';
+          }
         }
       );
     } catch (err) {

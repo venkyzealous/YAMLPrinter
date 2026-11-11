@@ -116,6 +116,15 @@
       return /\b(step|tab-pane|tabpanel|tab-content)\b/i.test(className);
     }
 
+    getComputedStyleSafe(el) {
+      try {
+        const win = el.ownerDocument && el.ownerDocument.defaultView ? el.ownerDocument.defaultView : window;
+        return win.getComputedStyle(el);
+      } catch (e) {
+        return window.getComputedStyle(el);
+      }
+    }
+
     isVisible(el) {
       if (!el || el.nodeType !== Node.ELEMENT_NODE) return false;
 
@@ -138,7 +147,7 @@
 
       // If inside a tab panel that was unhidden for print capture
       if (this.isInsideTabPanel) {
-        const style = window.getComputedStyle(el);
+        const style = this.getComputedStyleSafe(el);
         if (style.visibility === 'hidden' || parseFloat(style.opacity) < 0.05) {
           return false;
         }
@@ -147,12 +156,14 @@
 
       // Standard visibility check
       if (typeof el.checkVisibility === 'function') {
-        if (!el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) {
-          return false;
-        }
+        try {
+          if (!el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) {
+            return false;
+          }
+        } catch (e) {}
       }
 
-      const style = window.getComputedStyle(el);
+      const style = this.getComputedStyleSafe(el);
       if (
         style.display === 'none' ||
         style.visibility === 'hidden' ||
@@ -184,7 +195,7 @@
     }
 
     getVisualWeight(el) {
-      const style = window.getComputedStyle(el);
+      const style = this.getComputedStyleSafe(el);
       const weight = parseInt(style.fontWeight, 10) || (style.fontWeight === 'bold' ? 700 : 400);
       const size = Math.round(parseFloat(style.fontSize)) || 16;
       const isBold = weight >= 600;
@@ -336,7 +347,8 @@
     extractTabPanel(panel) {
       this.visitedElements.add(panel);
       const bbox = this.getBBox(panel);
-      const isHidden = panel.hasAttribute('hidden') || window.getComputedStyle(panel).display === 'none';
+      const style = this.getComputedStyleSafe(panel);
+      const isHidden = panel.hasAttribute('hidden') || style.display === 'none';
 
       // Temporarily flag that we are processing a tab panel so child visibility checks pass
       const prevInside = this.isInsideTabPanel;
