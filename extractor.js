@@ -222,37 +222,41 @@
         return this.extractTabPanel(el);
       }
 
-      // 3. Timelines, roadmaps, process steps, flow stages
-      const timelineData = this.detectTimelineOrSteps(el);
-      if (timelineData) {
-        this.markSubtreeVisited(el);
-        return timelineData;
-      }
-
-      // 4. Tables
+      // 3. Tables
       if (tagName === 'TABLE') {
-        this.markSubtreeVisited(el);
-        return this.extractTable(el);
+        const role = (el.getAttribute('role') || '').toLowerCase();
+        if (role !== 'presentation' && role !== 'none') {
+          this.markSubtreeVisited(el);
+          return this.extractTable(el);
+        }
       }
 
-      // 5. Lists
+      // 4. Lists
       if (tagName === 'UL' || tagName === 'OL' || tagName === 'DL') {
         this.markSubtreeVisited(el);
         return this.extractList(el);
       }
 
-      // 6. Headings
-      if (/^H[1-6]$/.test(tagName)) {
+      // 5. Headings
+      if (/^H[1-6]$/.test(tagName) || el.getAttribute('role') === 'heading') {
         this.visitedElements.add(el);
-        const text = this.getCleanDirectText(el) || el.innerText.trim();
+        const text = el.innerText.trim();
         if (!text) return null;
-        return {
+        const links = Array.from(el.querySelectorAll('a[href]'))
+          .filter(a => a.innerText.trim())
+          .map(a => ({ text: a.innerText.trim(), url: a.href }));
+        const level = /^H[1-6]$/.test(tagName)
+          ? parseInt(tagName.substring(1), 10)
+          : parseInt(el.getAttribute('aria-level'), 10) || 2;
+        const node = {
           type: 'heading',
-          level: parseInt(tagName.substring(1), 10),
+          level,
           text: text.replace(/\s+/g, ' '),
           bbox: this.getBBox(el),
           style: this.getVisualWeight(el)
         };
+        if (links.length > 0) node.links = links;
+        return node;
       }
 
       // 7. Blockquotes
@@ -534,83 +538,6 @@
         label: title,
         labels_in_graphic: textNodes.length > 0 ? textNodes : undefined
       };
-    }
-
-    detectTimelineOrSteps(container) {
-      const children = Array.from(container.children).filter(c => this.isVisible(c));
-      // Timelines and steppers must contain between 2 and 24 discrete milestone items
-      if (children.length < 2 || children.length > 24) return null;
-
-      const className = (container.className || '').toString().toLowerCase();
-      const id = (container.id || '').toLowerCase();
-      
-      // Strict timeline classes: NEVER match generic words like "process", "flow", "stages", "steps", "sequence", "pipeline"
-      // which are commonly used for entire page layouts or complex data grids
-      const isExplicitTimeline = /\b(timeline|stepper|milestone-track|step-indicator|progress-tracker)\b/i.test(
-        className + ' ' + id
-      );
-
-      // Verify that EVERY candidate child is a simple, atomic milestone node.
-      // If ANY child is a complex layout container (table, grid, cards, large text, nested structures),
-      // THIS IS NOT A SIMPLE INFOGRAPHIC TIMELINE - return null to preserve full hierarchy!
-      const items = [];
-      let markerFound = false;
-
-      for (const child of children) {
-        const text = child.innerText.trim();
-        if (!text) continue;
-
-        // Disqualify if child text is too long for a single milestone
-        if (text.length > 200) return null;
-
-        // Disqualify if child contains tables, forms, grids, or multiple headings
-        if (child.querySelector('table, form, [role="grid"], [role="table"], h1, h2, h3')) return null;
-
-        // Disqualify if child has too many DOM elements
-        if (child.querySelectorAll('*').length > 8) return null;
-
-        // Disqualify if child dimensions indicate a large layout container (> 220px height)
-        const bbox = this.getBBox(child);
-        if (bbox[3] > 220 || (bbox[2] > 600 && bbox[3] > 140)) return null;
-
-        const childClass = (child.className || '').toString().toLowerCase();
-        const hasMarkerEl = child.querySelector(
-          '.dot, .marker, .circle, .step-number, [class*="circle"], [class*="dot"]'
-        );
-        const isMilestoneItem = isExplicitTimeline || hasMarkerEl || /\b(timeline-item|step-item|milestone)\b/i.test(childClass);
-
-        if (hasMarkerEl) markerFound = true;
-
-        if (isMilestoneItem) {
-          const links = Array.from(child.querySelectorAll('a[href]'))
-            .filter(a => a.innerText.trim())
-            .map(a => ({ text: a.innerText.trim(), url: a.href }));
-
-          const itemNode = {
-            bbox,
-            content: text.replace(/\s+/g, ' ')
-          };
-          if (links.length > 0) itemNode.links = links;
-          items.push(itemNode);
-        }
-      }
-
-      // Only qualify if all candidate children are atomic milestones and have markers or explicit timeline class
-      if (items.length >= 2 && items.length === children.length && (isExplicitTimeline || markerFound)) {
-        const first = items[0].bbox;
-        const second = items[1].bbox;
-        const isHorizontal = Math.abs(first[0] - second[0]) > Math.abs(first[1] - second[1]);
-
-        return {
-          type: 'infographic_timeline',
-          orientation: isHorizontal ? 'horizontal' : 'vertical',
-          bbox: this.getBBox(container),
-          item_count: items.length,
-          items
-        };
-      }
-
-      return null;
     }
 
     getContainerSemanticType(el, tagName) {

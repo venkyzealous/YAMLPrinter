@@ -178,6 +178,14 @@ class PDFLayoutExtractor:
         tables = []
         table_rects = []
         try:
+            meta = page.parent.metadata or {}
+            producer = (meta.get("producer") or "").lower()
+            creator = (meta.get("creator") or "").lower()
+            title = (meta.get("title") or "").lower()
+            # Power BI, Skia/PDF, and dense vector drawings trigger C-level segfaults/infinite loops in MuPDF's find_tables
+            if "skia" in producer or "power bi" in creator or "power bi" in title or len(page.get_drawings()) > 100:
+                return [], []
+
             tabs = page.find_tables()
             if tabs and tabs.tables:
                 for tab in tabs.tables:

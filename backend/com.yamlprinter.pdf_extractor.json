@@ -4,6 +4,7 @@
   "path": "C:\\Users\\Venkatesh_Jagannatha\\OneDrive - EPAM\\Project\\ThomsonReuters\\AIWorkspace\\YAMLPrinter\\backend\\pdf_native_host.bat",
   "type": "stdio",
   "allowed_origins": [
-    "chrome-extension://egealfhapmcabmefaajdmlgbdjnbdnhb/"
+    "chrome-extension://egealfhapmcabmefaajdmlgbdjnbdnhb/",
+    "chrome-extension://clbmcmklddcicmkmbakobdncdinegjfd/"
   ]
 }

@@ -15,12 +15,17 @@ HOST_NAME = "com.yamlprinter.pdf_extractor"
 BAT_PATH = os.path.join(SCRIPT_DIR, "pdf_native_host.bat")
 JSON_PATH = os.path.join(SCRIPT_DIR, f"{HOST_NAME}.json")
 
-# Default deterministic extension ID
-DEFAULT_EXT_ID = "egealfhapmcabmefaajdmlgbdjnbdnhb"
+# Default deterministic extension IDs
+KNOWN_EXT_IDS = [
+    "egealfhapmcabmefaajdmlgbdjnbdnhb",
+    "clbmcmklddcicmkmbakobdncdinegjfd"
+]
 
 
 def install():
-    ext_id = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_EXT_ID
+    ext_ids = list(KNOWN_EXT_IDS)
+    if len(sys.argv) > 1 and sys.argv[1] not in ext_ids:
+        ext_ids.append(sys.argv[1])
 
     manifest_data = {
         "name": HOST_NAME,
@@ -28,7 +33,7 @@ def install():
         "path": BAT_PATH,
         "type": "stdio",
         "allowed_origins": [
-            f"chrome-extension://{ext_id}/"
+            f"chrome-extension://{eid}/" for eid in ext_ids
         ]
     }
 
@@ -53,7 +58,7 @@ def install():
             print(f"Warning: Could not register HKCU\\{subkey}: {e}")
 
     print("\nNative Host successfully installed!")
-    print(f"Allowed Extension ID: {ext_id}")
+    print(f"Allowed Extension IDs: {ext_ids}")
 
 
 if __name__ == "__main__":

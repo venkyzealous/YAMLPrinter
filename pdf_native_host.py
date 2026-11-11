@@ -10,14 +10,23 @@ sys.dont_write_bytecode = True
 import os
 import struct
 import json
+import datetime
 import traceback
 
-# Ensure current script directory is in sys.path
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
 
 from pdf_extractor import extract_pdf_to_yaml
+
+
+def log_host(msg):
+    try:
+        log_path = os.path.join(SCRIPT_DIR, "host.log")
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(f"[{datetime.datetime.now().isoformat()}] {msg}\n")
+    except Exception:
+        pass
 
 
 def read_message():
@@ -42,17 +51,17 @@ def send_message(message_dict):
 
 
 def main():
+    log_host("--- Host process started ---")
     while True:
         try:
             msg = read_message()
             if msg is None:
+                log_host("EOF reached on stdin. Exiting.")
                 break
 
-            action = msg.get("action", "EXTRACT_PDF")
-            url = msg.get("url", "")
-            file_path = msg.get("path", "")
+            log_host(f"Received action: {msg.get('action')}, url: {msg.get('url', msg.get('path'))}")
 
-            target = file_path if file_path else url
+            target = msg.get("path") or msg.get("url")
             if not target:
                 send_message({
                     "success": False,
@@ -61,6 +70,7 @@ def main():
                 continue
 
             yaml_str, filename = extract_pdf_to_yaml(target)
+            log_host(f"Extraction successful: filename={filename}, yaml_bytes={len(yaml_str)}")
 
             send_message({
                 "success": True,
@@ -70,10 +80,12 @@ def main():
             })
 
         except Exception as e:
+            err_trace = traceback.format_exc()
+            log_host(f"ERROR: {str(e)}\n{err_trace}")
             send_message({
                 "success": False,
                 "error": str(e),
-                "trace": traceback.format_exc()
+                "trace": err_trace
             })
             break
 
